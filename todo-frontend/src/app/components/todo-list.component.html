@@ -1,0 +1,102 @@
+<div class="todo-container">
+  <header class="todo-header">
+    <h1>My Todo List</h1>
+    <p>Stay organized and get things done</p>
+  </header>
+
+  <!-- Add Todo Form -->
+  <div class="add-todo-section">
+    <div class="add-todo-form">
+      <input
+        type="text"
+        [(ngModel)]="newTodo.title"
+        placeholder="Task title"
+        class="todo-input"
+        (keyup.enter)="addTodo()"
+      />
+      <input
+        type="text"
+        [(ngModel)]="newTodo.description"
+        placeholder="Description (optional)"
+        class="todo-input"
+        (keyup.enter)="addTodo()"
+      />
+      <button 
+        (click)="addTodo()" 
+        class="add-btn"
+        [disabled]="!newTodo.title.trim()"
+      >
+        Add Task
+      </button>
+    </div>
+  </div>
+
+  <!-- Todo Table -->
+  <div class="table-container">
+    @if (todos().length === 0) {
+      <div class="empty-state">
+        <h3>No tasks yet</h3>
+        <p>Add your first task above to get started!</p>
+      </div>
+    } @else {
+      <table class="todo-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Created</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (todo of todos(); track todo.id) {
+            <tr [class.editing]="editingId() === todo.id">
+              <td>{{ todo.id }}</td>
+              <td>
+                @if (editingId() === todo.id) {
+                  <input
+                    type="text"
+                    [(ngModel)]="editForm.title"
+                    class="edit-input"
+                    (keyup.enter)="saveEdit(todo.id)"
+                    (keyup.escape)="cancelEdit()"
+                  />
+                } @else {
+                  {{ todo.title }}
+                }
+              </td>
+              <td>
+                @if (editingId() === todo.id) {
+                  <input
+                    type="text"
+                    [(ngModel)]="editForm.description"
+                    class="edit-input"
+                    (keyup.enter)="saveEdit(todo.id)"
+                    (keyup.escape)="cancelEdit()"
+                  />
+                } @else {
+                  {{ todo.description || '-' }}
+                }
+              </td>
+              <td>{{ formatDate(todo.created_at) }}</td>
+              <td>{{ formatDate(todo.updated_at) }}</td>
+              <td>
+                <div class="action-buttons">
+                  @if (editingId() === todo.id) {
+                    <button (click)="saveEdit(todo.id)" class="save-btn">Save</button>
+                    <button (click)="cancelEdit()" class="cancel-btn">Cancel</button>
+                  } @else {
+                    <button (click)="startEdit(todo)" class="edit-btn">Edit</button>
+                    <button (click)="deleteTodo(todo.id)" class="delete-btn">Delete</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>
