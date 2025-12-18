@@ -24,9 +24,9 @@
       <button 
         (click)="addTodo()" 
         class="add-btn"
-        [disabled]="!newTodo.title.trim()"
+        [disabled]="!newTodo.title.trim() || loading()"
       >
-        Add Task
+        {{ loading() ? 'Adding...' : 'Add Task' }}
       </button>
     </div>
   </div>
@@ -42,7 +42,6 @@
       <table class="todo-table">
         <thead>
           <tr>
-            <th>ID</th>
             <th>Title</th>
             <th>Description</th>
             <th>Created</th>
@@ -53,7 +52,6 @@
         <tbody>
           @for (todo of todos(); track todo.id) {
             <tr [class.editing]="editingId() === todo.id">
-              <td>{{ todo.id }}</td>
               <td>
                 @if (editingId() === todo.id) {
                   <input
@@ -85,11 +83,11 @@
               <td>
                 <div class="action-buttons">
                   @if (editingId() === todo.id) {
-                    <button (click)="saveEdit(todo.id)" class="save-btn">Save</button>
-                    <button (click)="cancelEdit()" class="cancel-btn">Cancel</button>
+                    <button (click)="saveEdit(todo.id)" class="save-btn" [disabled]="loading()">{{ loading() ? 'Saving...' : 'Save' }}</button>
+                    <button (click)="cancelEdit()" class="cancel-btn" [disabled]="loading()">Cancel</button>
                   } @else {
-                    <button (click)="startEdit(todo)" class="edit-btn">Edit</button>
-                    <button (click)="deleteTodo(todo.id)" class="delete-btn">Delete</button>
+                    <button (click)="startEdit(todo)" class="edit-btn" [disabled]="loading()">Edit</button>
+                    <button (click)="deleteTodo(todo.id)" class="delete-btn" [disabled]="loading()">{{ loading() ? 'Deleting...' : 'Delete' }}</button>
                   }
                 </div>
               </td>

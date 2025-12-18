@@ -1,7 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Todo, CreateTodoRequest } from '../models/todo.model';
+import { TodoService } from '../services/todo.service';
+import { API_CONFIG } from '../config/api.config';
 
 @Component({
   selector: 'app-todo-list',
@@ -10,9 +13,10 @@ import { Todo, CreateTodoRequest } from '../models/todo.model';
   templateUrl: './todo-list.component.html',
   styleUrl: './todo-list.component.scss'
 })
-export class TodoListComponent {
+export class TodoListComponent implements OnInit {
   todos = signal<Todo[]>([]);
   editingId = signal<number | null>(null);
+  loading = signal<boolean>(false);
   
   newTodo: CreateTodoRequest = {
     title: '',
@@ -24,39 +28,61 @@ export class TodoListComponent {
     description: ''
   };
 
-  constructor() {
-    // Mock data for demonstration
-    this.todos.set([
-      {
-        id: 1,
-        title: 'Complete project documentation',
-        description: 'Write comprehensive README and API documentation',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+  constructor(private todoService: TodoService, private http: HttpClient) {}
+
+  ngOnInit() {
+    console.log('Component initialized, testing API...');
+    this.testAPI();
+  }
+
+  testAPI() {
+    // Test direct HTTP call
+    console.log('Testing direct API call to: http://localhost:3000/api/todos');
+    this.http.get('http://localhost:3000/api/todos').subscribe({
+      next: (data) => {
+        console.log('SUCCESS - Direct API call worked:', data);
+        this.todos.set(data as Todo[]);
       },
-      {
-        id: 2,
-        title: 'Setup development environment',
-        description: 'Install Node.js, PostgreSQL, and configure the database',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        updated_at: new Date(Date.now() - 86400000).toISOString()
+      error: (error) => {
+        console.error('FAILED - Direct API call failed:', error);
+        console.log('Error status:', error.status);
+        console.log('Error message:', error.message);
       }
-    ]);
+    });
+  }
+
+  loadTodos() {
+    console.log('Loading todos from API...');
+    this.loading.set(true);
+    this.todoService.getTodos().subscribe({
+      next: (todos) => {
+        console.log('Todos received:', todos);
+        this.todos.set(todos);
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading todos:', error);
+        console.error('Full error object:', error);
+        this.loading.set(false);
+      }
+    });
   }
 
   addTodo() {
     if (!this.newTodo.title.trim()) return;
 
-    const newTodo: Todo = {
-      id: Date.now(),
-      title: this.newTodo.title.trim(),
-      description: this.newTodo.description?.trim() || '',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    this.todos.update(todos => [newTodo, ...todos]);
-    this.resetForm();
+    this.loading.set(true);
+    this.todoService.createTodo(this.newTodo).subscribe({
+      next: (newTodo) => {
+        this.todos.update(todos => [newTodo, ...todos]);
+        this.resetForm();
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error creating todo:', error);
+        this.loading.set(false);
+      }
+    });
   }
 
   startEdit(todo: Todo) {
@@ -68,21 +94,21 @@ export class TodoListComponent {
   saveEdit(id: number) {
     if (!this.editForm.title.trim()) return;
 
-    this.todos.update(todos =>
-      todos.map(todo =>
-        todo.id === id
-          ? {
-              ...todo,
-              title: this.editForm.title.trim(),
-              description: this.editForm.description.trim(),
-              updated_at: new Date().toISOString()
-            }
-          : todo
-      )
-    );
-    this.cancelEdit();
+    this.loading.set(true);
+    this.todoService.updateTodo(id, this.editForm).subscribe({
+      next: (updatedTodo) => {
+        this.todos.update(todos =>
+          todos.map(todo => todo.id === id ? updatedTodo : todo)
+        );
+        this.cancelEdit();
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error updating todo:', error);
+        this.loading.set(false);
+      }
+    });
   }
-
   cancelEdit() {
     this.editingId.set(null);
     this.editForm.title = '';
@@ -91,7 +117,17 @@ export class TodoListComponent {
 
   deleteTodo(id: number) {
     if (confirm('Are you sure you want to delete this task?')) {
-      this.todos.update(todos => todos.filter(todo => todo.id !== id));
+      this.loading.set(true);
+      this.todoService.deleteTodo(id).subscribe({
+        next: () => {
+          this.todos.update(todos => todos.filter(todo => todo.id !== id));
+          this.loading.set(false);
+        },
+        error: (error) => {
+          console.error('Error deleting todo:', error);
+          this.loading.set(false);
+        }
+      });
     }
   }
 
