@@ -15,8 +15,10 @@ import { API_CONFIG } from '../config/api.config';
 })
 export class TodoListComponent implements OnInit {
   todos = signal<Todo[]>([]);
-  editingId = signal<number | null>(null);
   loading = signal<boolean>(false);
+  showEditModal = signal<boolean>(false);
+  showDeleteModal = signal<boolean>(false);
+  selectedTodo = signal<Todo | null>(null);
   
   newTodo: CreateTodoRequest = {
     title: '',
@@ -85,22 +87,31 @@ export class TodoListComponent implements OnInit {
     });
   }
 
-  startEdit(todo: Todo) {
-    this.editingId.set(todo.id);
+  openEditModal(todo: Todo) {
+    this.selectedTodo.set(todo);
     this.editForm.title = todo.title;
     this.editForm.description = todo.description;
+    this.showEditModal.set(true);
   }
 
-  saveEdit(id: number) {
-    if (!this.editForm.title.trim()) return;
+  closeEditModal() {
+    this.showEditModal.set(false);
+    this.selectedTodo.set(null);
+    this.editForm.title = '';
+    this.editForm.description = '';
+  }
+
+  saveEdit() {
+    const todo = this.selectedTodo();
+    if (!todo || !this.editForm.title.trim()) return;
 
     this.loading.set(true);
-    this.todoService.updateTodo(id, this.editForm).subscribe({
+    this.todoService.updateTodo(todo.id, this.editForm).subscribe({
       next: (updatedTodo) => {
         this.todos.update(todos =>
-          todos.map(todo => todo.id === id ? updatedTodo : todo)
+          todos.map(t => t.id === todo.id ? updatedTodo : t)
         );
-        this.cancelEdit();
+        this.closeEditModal();
         this.loading.set(false);
       },
       error: (error) => {
@@ -109,26 +120,33 @@ export class TodoListComponent implements OnInit {
       }
     });
   }
-  cancelEdit() {
-    this.editingId.set(null);
-    this.editForm.title = '';
-    this.editForm.description = '';
+
+  openDeleteModal(todo: Todo) {
+    this.selectedTodo.set(todo);
+    this.showDeleteModal.set(true);
   }
 
-  deleteTodo(id: number) {
-    if (confirm('Are you sure you want to delete this task?')) {
-      this.loading.set(true);
-      this.todoService.deleteTodo(id).subscribe({
-        next: () => {
-          this.todos.update(todos => todos.filter(todo => todo.id !== id));
-          this.loading.set(false);
-        },
-        error: (error) => {
-          console.error('Error deleting todo:', error);
-          this.loading.set(false);
-        }
-      });
-    }
+  closeDeleteModal() {
+    this.showDeleteModal.set(false);
+    this.selectedTodo.set(null);
+  }
+
+  confirmDelete() {
+    const todo = this.selectedTodo();
+    if (!todo) return;
+
+    this.loading.set(true);
+    this.todoService.deleteTodo(todo.id).subscribe({
+      next: () => {
+        this.todos.update(todos => todos.filter(t => t.id !== todo.id));
+        this.closeDeleteModal();
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error deleting todo:', error);
+        this.loading.set(false);
+      }
+    });
   }
 
   formatDate(dateString: string): string {
