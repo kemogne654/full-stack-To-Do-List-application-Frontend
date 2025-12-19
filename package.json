@@ -1,0 +1,7 @@
+{
+  "name": "todo-frontend-deploy",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd todo-frontend && npm ci && npm run build"
+  }
+}
