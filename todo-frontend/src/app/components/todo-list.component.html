@@ -51,7 +51,7 @@
         </thead>
         <tbody>
           @for (todo of todos(); track todo.id) {
-            <tr [class.editing]="editingId() === todo.id">
+            <tr>
               <td>{{ todo.title }}</td>
               <td>{{ todo.description || '-' }}</td>
               <td>{{ formatDate(todo.created_at) }}</td>
